@@ -1,0 +1,31 @@
+import os
+import base64
+import json
+from io import BytesIO
+from PIL import Image
+from flask import Flask, request, jsonify, render_template
+from groq import Groq
+
+app = Flask(__name__)
+GROQ_API_KEY = "YOUR_GROQ_API_KEY_HERE"
+client = Groq(api_key=GROQ_API_KEY)
+
+def compress_image(image_bytes: bytes) -> bytes:
+    img = Image.open(BytesIO(image_bytes)).convert("RGB")
+    img.thumbnail((512, 512))
+    buffer = BytesIO()
+    img.save(buffer, format="JPEG", quality=85)
+    return buffer.getvalue()
+
+@app.route("/analyze", methods=["POST"])
+def analyze():
+    if "image" in request.files:
+        file = request.files["image"]
+        raw_bytes = file.read()
+    processed_bytes = compress_image(raw_bytes)
+    result = analyze_with_groq(processed_bytes)
+    return jsonify(result)
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)
+
